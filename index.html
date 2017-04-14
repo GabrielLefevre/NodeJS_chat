@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Gandalf FTW</title>
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.css" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<br/>
+<div class="container">
+    <div class="row">
+        <div class="col-md-5">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <span class="glyphicon glyphicon-comment"></span> Bienvenue sur le super chat du serveur dev !
+                </div>
+                <div class="panel-body">
+                    <ul class="chat" id="chat">
+
+                    </ul>
+                </div>
+                <div class="panel-footer">
+                    <div class="input-group">
+                        <form onsubmit="return (envoiMessage());">
+                            <input type="text" name="message" id="message" placeholder="Votre message..." size="50" autofocus/>
+                            <button type="submit" class="btn btn-info btn-sm" id="btn-chat">
+                                Envoie</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/Sagg08DrO5U?ecver=1" frameborder="0"
+        allowfullscreen></iframe>
+
+<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+<script src="http://gandalf.centaure-systems.fr:8080/socket.io/socket.io.js"></script>
+
+<script>
+    var socket = io.connect('gandalf.centaure-systems.fr:8080');
+    var pseudo = prompt('Votre pseudo ?') || 'Utilisateur';
+    socket.emit('nouveauUser',pseudo);
+
+    socket.on('recupererMessages', function (messages) {
+        var html = '';
+        for (var i = 0; i < messages.length; i++)
+            html += '<li class=\"left clearfix\"><span class=\"chat-img pull-left\">'+
+                '<img src=\"http://placehold.it/50/55C1E7/fff&text=U\" alt=\"User Avatar\" class=\"img-circle\" />'+
+                ' </span> <div class=\"chat-body clearfix\"> <div class=\"header\"> <strong class=\"primary-font\">'+
+                messages[i].pseudo+'</strong> <small class=\"pull-right text-muted\">'+
+                '<span class=\"glyphicon glyphicon-time\"></span>0 mins ago</small>'+
+        '</div> <p>'+messages[i].message+'</p> </div> </li>';
+        document.getElementById('chat').innerHTML = html;
+    });
+    socket.on('recupererNouveauMessage', function (message) {
+        document.getElementById('chat').innerHTML += '<li class=\"left clearfix\"><span class=\"chat-img pull-left\">'+
+            '<img src=\"http://placehold.it/50/55C1E7/fff&text=U\" alt=\"User Avatar\" class=\"img-circle\" />'+
+            ' </span> <div class=\"chat-body clearfix\"> <div class=\"header\"> <strong class=\"primary-font\">'+
+            message.pseudo+'</strong> <small class=\"pull-right text-muted\">'+
+            '<span class=\"glyphicon glyphicon-time\"></span>0 mins ago</small>'+
+            '</div> <p>'+message.message+'</p> </div> </li>';
+    });
+
+    function envoiMessage(mess) {
+        var message = document.getElementById('message').value;
+        socket.emit('nouveauMessage', { 'pseudo' : pseudo, 'message' : message });
+        document.getElementById('message').value = '';
+        return false;
+    }
+
+</script>
+</body>
+</html>
+
+<!--
+<li class="left clearfix"><span class="chat-img pull-left">
+                            <img src="http://placehold.it/50/55C1E7/fff&text=U" alt="User Avatar" class="img-circle" />
+                        </span>
+                            <div class="chat-body clearfix">
+                                <div class="header">
+                                    <strong class="primary-font">
+                                    Jack Sparrow
+                                    </strong> <small class="pull-right text-muted">
+                                    <span class="glyphicon glyphicon-time"></span>0 mins ago</small>
+                                </div>
+                                <p>
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur bibendum ornare
+                                    dolor, quis ullamcorper ligula sodales.
+                                </p>
+                            </div>
+                        </li>
