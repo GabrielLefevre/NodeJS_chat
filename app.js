@@ -5,3 +5,6 @@ var config = {
 }
 
 server.init(config);
+
+console.log("Salut ! je démarre ! ");
+

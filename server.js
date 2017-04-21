@@ -2,21 +2,24 @@
  * Created by DEV2 on 07/04/2017.
  */
 var moment = require('moment');
+const readline = require('readline');
+var fs = require("fs");
 
 function MySocket(id, socket) {
     this.id = id;
     this.socket = socket;
 };
 
-function User(id,nom) {
+function User(id,nom,socketId) {
     this.id = id;
     this.nom = nom;
+    this.socketId = socketId;
 };
 
-function Message(id,message,user,date) {
+function Message(id,user,message,date) {
     this.id = id;
-    this.message = message;
     this.user = user;
+    this.message = message;
     this.date = date;
 };
 
@@ -38,11 +41,25 @@ function idGenerateur() {
     }
 }
 
+function ecritureFichier(file, message) {
+    fs.appendFile(file, message, function (err) {
+        if (err)
+            return console.log(err);
+    });
+}
+
+function recuperationListeMessages() {
+    return fs.readFileSync('messages.json','utf8','r', function(err, data)  {
+        if (err) throw err;
+        return data;
+    });
+}
+
 exports.messages = [];
 exports.users = [];
 exports.port = undefined;
 exports.sockets = [];
-exports.dateTimeCurrent = moment().format('DD-MM-YYYY, HH:mm:ss');
+
 exports.init = function (config) {
     var _self = this;
     this.port = config.port;
@@ -50,35 +67,47 @@ exports.init = function (config) {
 
     this.io.sockets.on('connection', function (socket) {
         var __self = _self;
-
         __self.sockets.push(new MySocket(socket.id, socket));
-        console.log(__self.dateTimeCurrent+" Nouvelle connexion, nombre de Gandalf-guys présent : "+_self.sockets.length);
+        console.log(JSON.parse(recuperationListeMessages()));
+        fs.appendFile('log.txt', moment().format('DD-MM-YYYY, HH:mm:ss')+" Nouvelle connexion\n", function (err) {
+            if (err)
+                return console.log(err);
+        });
 
         socket.on('nouveauUser',function(pseudo){
             id = new idGenerateur().generate();
-            nouveauUser = new User(id,pseudo);
+            nouveauUser = new User(id,pseudo,socket.id);
             __self.users.push(nouveauUser);
-            console.log( nouveauUser.id+" "+nouveauUser.nom);
+            socket.emit('currentUser', nouveauUser);
+            ecritureFichier('log.txt',JSON.stringify(nouveauUser)+"\n");
+            __self.io.sockets.emit('recupererUsers', __self.users);
+            socket.emit('recupererMessages', __self.messages);
         })
 
-        socket.emit('recupererMessages', __self.messages);
-        socket.on('nouveauMessage', function(message){
-            currentMessage = new Message(message);
+        socket.on('nouveauMessage', function(data){
+            id = new idGenerateur().generate();
+            currentMessage = new Message(id,data.user,data.message,moment().format('DD-MM-YYYY, HH:mm:ss'));
             __self.messages.push(currentMessage);
-            __self.io.sockets.emit('recupererNouveauMessage', message);
+            ecritureFichier('messages.json',JSON.stringify(currentMessage)+"\n");
+            __self.io.sockets.emit('recupererNouveauMessage', currentMessage);
         })
 
         socket.on('disconnect', function () {
+            for ( i = 0; i<__self.users.length; i++) {
+                if(__self.users[i].socketId == socket['id']) {
+                    ecritureFichier('log.txt', moment().format('DD-MM-YYYY, HH:mm:ss')+" Deconnexion\n");
+                    ecritureFichier('log.txt',JSON.stringify(__self.users[i])+"\n");
+                    console.log("Déconnexion de "+__self.users[i].nom);
+                    __self.users.splice(i,1);
+                    __self.io.sockets.emit('recupererUsers', __self.users);
+                }
+            }
             for ( i = 0; i<__self.sockets.length; i++) {
                 if(__self.sockets[i].id == socket['id']) {
                     __self.sockets.splice(i,1);
-                    console.log("Déconnexion");
                 }
             }
             __self.io.emit();
         });
     });
-
-
-
 };
